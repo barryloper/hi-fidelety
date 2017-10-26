@@ -4,7 +4,7 @@ import pkg_resources
 from pathlib import Path
 from functools import partial
 
-__all__ = ['initialize_db', 'get_artists', 'get_album', 'update_album', 'create_album', 'delete_album']
+__all__ = ['initialize_db', 'get_artists', 'get_artist_albums', 'get_album', 'update_album', 'create_album', 'delete_album', 'get_genres']
 
 DB_LOCATION = Path.home() / 'hifi.sqlite'
 
@@ -148,7 +148,19 @@ def get_artist_albums(artist):
     """ this will be useful for the "index of artists requirement"
         in an index of artists, each name could link to a list of albums
     """
-    raise NotImplementedError
+    artist_id = _create_artist(artist)
+    with connect() as conn:
+        curr = conn.execute("""SELECT albums.name AS album, 
+                                       artists.name AS artist, 
+                                       genres.name AS genre, 
+                                       albums.year AS year,
+                                       album_id,
+                                       artist_id,
+                                       genre_id
+                                FROM albums 
+                                JOIN artists USING (artist_id)
+                                JOIN genres USING (genre_id)
+                                WHERE artist_id=? """, (artist_id,))
 
 
 def get_genre_albums(genre):
@@ -186,3 +198,27 @@ def delete_album(name, artist):
                                   artist_id=(SELECT artist_id FROM artists WHERE name=?)""",
                             (name, artist))
     return curr.rowcount
+
+
+def get_genres():
+    """returns album count by genre"""
+    with connect() as conn:
+        curr = conn.execute("""SELECT genres.name,
+                                      count() AS album_count
+                               FROM albums 
+                               JOIN genres ON albums.genre_id=genres.genre_id
+                               GROUP BY albums.genre_id
+                               ORDER BY album_count DESC""")
+        result = curr.fetchall()
+    return [{'genre': row[0], 'albums': row[1]} for row in result]
+
+def get_years():
+    """returns album count by year"""
+    with connect() as conn:
+        curr = conn.execute("""SELECT year,
+                                      count() AS album_count
+                               FROM albums 
+                               GROUP BY year
+                               ORDER BY album_count DESC""")
+        result = curr.fetchall()
+    return [{'year': row[0], 'albums': row[1]} for row in result]
