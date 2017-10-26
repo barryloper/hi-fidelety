@@ -79,4 +79,7 @@ def delete_album(name: hug.types.text,
 
 
 def main():
+    if not os.path.exists(db.DB_LOCATION):
+        db.initialize_db()
+
     hug.API(__name__).http.serve()
