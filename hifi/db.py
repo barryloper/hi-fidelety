@@ -1,28 +1,23 @@
 import sqlite3
 import csv
-import pkg_resources
-from pathlib import Path
 from functools import partial
 
 __all__ = ['initialize_db', 'get_artists', 'get_artist_albums', 'get_album', 'update_album', 'create_album', 'delete_album', 'get_genres']
 
-DB_LOCATION = Path.home() / 'hifi.sqlite'
 
 connect = partial(sqlite3.connect, str(DB_LOCATION))
 
-
-def initialize_db():
-    CSV_FILE = pkg_resources.resource_filename('hifi', 'data/albums.csv')
+def initialize_db(db_location):
     tables = """
-        CREATE TABLE 'artists' (
+        CREATE TABLE IF NOT EXISTS 'artists' (
           artist_id INTEGER PRIMARY KEY,
           name TEXT UNIQUE NOT NULL
         );
-        CREATE TABLE 'genres' (
+        CREATE TABLE IF NOT EXISTS 'genres' (
           genre_id INTEGER PRIMARY KEY,
           name TEXT UNIQUE NOT NULL
         );
-        CREATE TABLE 'albums' (
+        CREATE TABLE IF NOT EXISTS 'albums' (
           album_id INTEGER PRIMARY KEY,
           name TEXT NOT NULL,
           year INTEGER NOT NULL,
@@ -38,9 +33,12 @@ def initialize_db():
         curr = conn.cursor()
         curr.executescript(tables)
 
+
+def import_csv(albums_csv):
+    """imports some initial data into an empty database"""
     with connect() as conn:
         curr = conn.cursor()
-        with open(CSV_FILE, 'r',
+        with open(albums_csv, 'r',
                   encoding='cp1252') as f:  # csv has a non-standard encoding
             reader = csv.DictReader(f, dialect='excel')
 
